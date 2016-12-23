@@ -28,6 +28,8 @@ import com.android.volley.toolbox.ImageLoader;
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
 
+import java.util.HashMap;
+
 /**
  * A fragment representing a single Article detail screen. This fragment is
  * either contained in a {@link ArticleListActivity} in two-pane mode (on
@@ -200,15 +202,20 @@ public class ArticleDetailFragment extends Fragment implements
             ImageLoaderHelper.getInstance(getActivity()).getImageLoader()
                     .get(mCursor.getString(ArticleLoader.Query.PHOTO_URL), new ImageLoader.ImageListener() {
                         @Override
-                        public void onResponse(ImageLoader.ImageContainer imageContainer, boolean b) {
+                        public void onResponse(final ImageLoader.ImageContainer imageContainer, boolean b) {
                             Bitmap bitmap = imageContainer.getBitmap();
                             if (bitmap != null) {
-                                Palette p = Palette.generate(bitmap, 12);
-                                mMutedColor = p.getDarkMutedColor(0xFF333333);
-                                mPhotoView.setImageBitmap(imageContainer.getBitmap());
-                                mRootView.findViewById(R.id.meta_bar)
-                                        .setBackgroundColor(mMutedColor);
-                                updateStatusBar();
+                                Palette.from(bitmap).generate(new Palette.PaletteAsyncListener() {
+                                    @Override
+                                    public void onGenerated(Palette palette) {
+                                        HashMap map = processPalette(palette);
+                                        mMutedColor = ((Palette.Swatch)map.get("Muted")).getRgb();
+                                        mPhotoView.setImageBitmap(imageContainer.getBitmap());
+                                        mRootView.findViewById(R.id.meta_bar)
+                                                .setBackgroundColor(mMutedColor);
+                                        updateStatusBar();
+                                    }
+                                });
                             }
                         }
 
@@ -223,6 +230,26 @@ public class ArticleDetailFragment extends Fragment implements
             bylineView.setText("N/A" );
             bodyView.setText("N/A");
         }
+    }
+
+    HashMap<String, Palette.Swatch> processPalette(Palette p) {
+        HashMap<String, Palette.Swatch> map = new HashMap<>();
+
+        if (p.getVibrantSwatch() != null)
+            map.put("Vibrant", p.getVibrantSwatch());
+        if (p.getDarkVibrantSwatch() != null)
+            map.put("DarkVibrant", p.getDarkVibrantSwatch());
+        if (p.getLightVibrantSwatch() != null)
+            map.put("LightVibrant", p.getLightVibrantSwatch());
+
+        if (p.getMutedSwatch() != null)
+            map.put("Muted", p.getMutedSwatch());
+        if (p.getDarkMutedSwatch() != null)
+            map.put("DarkMuted", p.getDarkMutedSwatch());
+        if (p.getLightMutedSwatch() != null)
+            map.put("LightMuted", p.getLightMutedSwatch());
+
+        return map;
     }
 
     @Override
