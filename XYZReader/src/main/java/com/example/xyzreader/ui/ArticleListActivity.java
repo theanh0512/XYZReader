@@ -1,11 +1,14 @@
 package com.example.xyzreader.ui;
 
+import android.app.Activity;
+import android.app.ActivityOptions;
 import android.app.LoaderManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
+import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -15,6 +18,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.text.format.DateUtils;
+import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
@@ -38,6 +42,9 @@ public class ArticleListActivity extends AppCompatActivity implements
     private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
+    private Activity articleListActivity = this;
+    private boolean mHoldForTransition;
+    public static int counter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +60,9 @@ public class ArticleListActivity extends AppCompatActivity implements
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         getLoaderManager().initLoader(0, null, this);
+
+        TypedArray a = this.obtainStyledAttributes(R.styleable.ArticleListActivity);
+        mHoldForTransition = a.getBoolean(R.styleable.ArticleListActivity_sharedElementTransitions, false);
 
         if (savedInstanceState == null) {
             refresh();
@@ -99,13 +109,22 @@ public class ArticleListActivity extends AppCompatActivity implements
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        Adapter adapter = new Adapter(cursor);
-        adapter.setHasStableIds(true);
-        mRecyclerView.setAdapter(adapter);
-        int columnCount = getResources().getInteger(R.integer.list_column_count);
-        StaggeredGridLayoutManager sglm =
-                new StaggeredGridLayoutManager(columnCount, StaggeredGridLayoutManager.VERTICAL);
-        mRecyclerView.setLayoutManager(sglm);
+
+        if ( cursor.getCount() == 0 ) {
+            this.supportStartPostponedEnterTransition();
+        }
+        else {
+            Adapter adapter = new Adapter(cursor);
+            adapter.setHasStableIds(true);
+            mRecyclerView.setAdapter(adapter);
+            int columnCount = getResources().getInteger(R.integer.list_column_count);
+            StaggeredGridLayoutManager sglm =
+                    new StaggeredGridLayoutManager(columnCount, StaggeredGridLayoutManager.VERTICAL);
+            mRecyclerView.setLayoutManager(sglm);
+            if (mHoldForTransition) {
+                this.supportStartPostponedEnterTransition();
+            }
+        }
     }
 
     @Override
@@ -133,8 +152,13 @@ public class ArticleListActivity extends AppCompatActivity implements
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    startActivity(new Intent(Intent.ACTION_VIEW,
-                            ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition()))));
+                    counter++;
+                    vh.thumbnailView.setTransitionName(String.valueOf(counter));
+                    Bundle bundle = ActivityOptions.makeSceneTransitionAnimation(articleListActivity, vh.thumbnailView,vh.thumbnailView.getTransitionName()).toBundle();
+                    final Intent intent = new Intent(Intent.ACTION_VIEW,
+                            ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
+                    intent.putExtra("transitionName",counter);
+                    startActivity(intent,bundle);
                 }
             });
             return vh;

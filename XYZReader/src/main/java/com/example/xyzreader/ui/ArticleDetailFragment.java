@@ -12,6 +12,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.support.v4.app.ShareCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.graphics.Palette;
 import android.text.Html;
 import android.text.format.DateUtils;
@@ -57,6 +58,10 @@ public class ArticleDetailFragment extends Fragment implements
     private boolean mIsCard = false;
     private int mStatusBarFullOpacityBottom;
 
+    //Transition animation
+    static final String DETAIL_TRANSITION_ANIMATION = "DTA";
+    private boolean mTransitionAnimation;
+
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
@@ -68,6 +73,7 @@ public class ArticleDetailFragment extends Fragment implements
         Bundle arguments = new Bundle();
         arguments.putLong(ARG_ITEM_ID, itemId);
         ArticleDetailFragment fragment = new ArticleDetailFragment();
+        arguments.putBoolean(ArticleDetailFragment.DETAIL_TRANSITION_ANIMATION, true);
         fragment.setArguments(arguments);
         return fragment;
     }
@@ -104,6 +110,12 @@ public class ArticleDetailFragment extends Fragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
+        Bundle arguments = getArguments();
+        if (arguments != null) {
+            mTransitionAnimation = arguments.getBoolean(ArticleDetailFragment.DETAIL_TRANSITION_ANIMATION, false);
+        }
+        Intent intent = getActivity().getIntent();
+
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
         mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
                 mRootView.findViewById(R.id.draw_insets_frame_layout);
@@ -126,6 +138,9 @@ public class ArticleDetailFragment extends Fragment implements
         });
 
         mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
+        if(intent.hasExtra("transitionName")){
+            mPhotoView.setTransitionName(String.valueOf(intent.getIntExtra("transitionName",0)));
+        }
         mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
 
         mStatusBarColorDrawable = new ColorDrawable(0);
@@ -274,6 +289,10 @@ public class ArticleDetailFragment extends Fragment implements
         }
 
         bindViews();
+        if ( mTransitionAnimation ) {
+            AppCompatActivity activity = (AppCompatActivity)getActivity();
+            activity.supportStartPostponedEnterTransition();
+        }
     }
 
     @Override
